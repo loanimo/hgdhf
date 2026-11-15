@@ -1,0 +1,1369 @@
+let rawBalance = parseInt(localStorage.getItem('lotto_balance'));
+let balance = !isNaN(rawBalance) ? rawBalance : 15500;
+
+let rawSessionWon = parseInt(localStorage.getItem('lotto_sessionWon'));
+let sessionTotalWon = !isNaN(rawSessionWon) ? rawSessionWon : 0;
+
+let winningDate = localStorage.getItem('lotto_winDate') || "";
+let currentCurrency = 'BDT';
+
+let currentDrawNum = parseInt(localStorage.getItem('lotto_drawNum')) || 842;
+let timeLeftSeconds = 150;
+
+let pendingApplications = JSON.parse(localStorage.getItem('lotto_pendingApps')) || [];
+let depositRequests = JSON.parse(localStorage.getItem('lotto_deposits')) || [];
+let withdrawRequests = JSON.parse(localStorage.getItem('lotto_withdraws')) || [];
+let clientNotifications = JSON.parse(localStorage.getItem('lotto_notifications')) || [];
+let ticketHistory = JSON.parse(localStorage.getItem('lotto_ticketHistory')) || [];
+let depositHistory = JSON.parse(localStorage.getItem('lotto_depHistory')) || [];
+let withdrawHistory = JSON.parse(localStorage.getItem('lotto_wdHistory')) || [];
+let referHistory = JSON.parse(localStorage.getItem('lotto_refHistory')) || [
+    { referredName: "সাকিব আল হাসান", commission: 500 }
+];
+
+let packageAdminCodes = JSON.parse(localStorage.getItem('lotto_pkgAdminCodes')) || {
+    starter: ["STR-1234", "STR-5678"],
+    bronze: ["BRZ-2233"],
+    silver: ["SLV-4455"],
+    gold: ["GLD-6677"],
+    platinum: ["PLT-8899"]
+};
+
+const packageRules = {
+    starter: { label: "প্যাকেজ ১: স্টার্টার প্যাক", prefix: "STR", totalPrize: 1226000, cards: 10 },
+    bronze: { label: "প্যাকেজ ২: ব্রোঞ্জ প্যাক", prefix: "BRZ", totalPrize: 2500000, cards: 18 },
+    silver: { label: "প্যাকেজ ৩: সিলভার প্যাক", prefix: "SLV", totalPrize: 5000000, cards: 25 },
+    gold: { label: "প্যাকেজ ৪: গোল্ড প্যাক", prefix: "GLD", totalPrize: 10000000, cards: 55 },
+    platinum: { label: "প্যাকেজ ৫: প্লাটিনাম প্যাক", prefix: "PLT", totalPrize: 25000000, cards: 110 }
+};
+
+let registeredUsers = JSON.parse(localStorage.getItem('lotto_regUsers')) || [
+    { name: "মেহেদী হাসান", phone: "01994500030", email: "mehedi@gmail.com", password: "123", myReferCode: "REF-1001", unclaimedBonus: 500, claimedBonus: 0 }
+];
+
+let adminNoticeText = localStorage.getItem('lotto_notice') || "🔥 গ্লোবাল মেগা লটারি ড্র চলছে! প্যাকেজ ১ কিনে জিতে নিন নিশ্চিত ৳১২,২৬,০০০ পর্যন্ত পুরস্কার!";
+
+let chatThreads = JSON.parse(localStorage.getItem('lotto_chatThreads')) || {
+    "মেহেদী হাসান": [
+        { sender: "admin", text: "আসসালামু আলাইকুম! আপনাকে কীভাবে সাহায্য করতে পারি?" }
+    ]
+};
+let activeAdminChatClient = "মেহেদী হাসান";
+
+let currentUser = JSON.parse(localStorage.getItem('lotto_currentUser')) || {
+    name: "মেহেদী হাসান",
+    phone: "01994500030",
+    email: "mehedi@gmail.com",
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    myReferCode: "REF-1001",
+    unclaimedBonus: 500,
+    claimedBonus: 0
+};
+
+if (isNaN(currentUser.unclaimedBonus)) currentUser.unclaimedBonus = 500;
+if (isNaN(currentUser.claimedBonus)) currentUser.claimedBonus = 0;
+
+function saveData() {
+    if (isNaN(balance)) balance = 15500;
+    localStorage.setItem('lotto_balance', balance);
+    localStorage.setItem('lotto_sessionWon', sessionTotalWon || 0);
+    localStorage.setItem('lotto_winDate', winningDate);
+    localStorage.setItem('lotto_drawNum', currentDrawNum);
+    localStorage.setItem('lotto_pendingApps', JSON.stringify(pendingApplications));
+    localStorage.setItem('lotto_deposits', JSON.stringify(depositRequests));
+    localStorage.setItem('lotto_withdraws', JSON.stringify(withdrawRequests));
+    localStorage.setItem('lotto_notifications', JSON.stringify(clientNotifications));
+    localStorage.setItem('lotto_ticketHistory', JSON.stringify(ticketHistory));
+    localStorage.setItem('lotto_depHistory', JSON.stringify(depositHistory));
+    localStorage.setItem('lotto_wdHistory', JSON.stringify(withdrawHistory));
+    localStorage.setItem('lotto_refHistory', JSON.stringify(referHistory));
+    localStorage.setItem('lotto_pkgAdminCodes', JSON.stringify(packageAdminCodes));
+    localStorage.setItem('lotto_regUsers', JSON.stringify(registeredUsers));
+    localStorage.setItem('lotto_notice', adminNoticeText);
+    localStorage.setItem('lotto_currentUser', JSON.stringify(currentUser));
+    localStorage.setItem('lotto_chatThreads', JSON.stringify(chatThreads));
+}
+
+function playPopupSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc1.type = 'sine';
+        osc2.type = 'triangle';
+        osc1.frequency.setValueAtTime(587.33, now);
+        osc2.frequency.setValueAtTime(880, now + 0.08);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc1.start(now);
+        osc2.start(now + 0.08);
+        osc1.stop(now + 0.45);
+        osc2.stop(now + 0.45);
+    } catch (e) {}
+}
+
+window.onload = function() {
+    changeCurrency();
+    updateProfileUI();
+    updateNotificationBadge();
+    document.getElementById('adminNoticeTicker').innerText = adminNoticeText;
+    document.getElementById('megaDrawNumber').innerText = currentDrawNum;
+    renderChatMessages();
+
+    setInterval(() => {
+        if (timeLeftSeconds > 0) {
+            timeLeftSeconds--;
+        } else {
+            currentDrawNum++;
+            timeLeftSeconds = 150;
+            document.getElementById('megaDrawNumber').innerText = currentDrawNum;
+            saveData();
+            showBottomLeftPopup(`🎊 নতুন মেগা ড্র #${currentDrawNum} শুরু হয়েছে!`);
+        }
+
+        let hrs = Math.floor(timeLeftSeconds / 3600);
+        let mins = Math.floor((timeLeftSeconds % 3600) / 60);
+        let secs = timeLeftSeconds % 60;
+
+        document.getElementById('timerHours').innerText = String(hrs).padStart(2, '0');
+        document.getElementById('timerMinutes').innerText = String(mins).padStart(2, '0');
+        document.getElementById('timerSeconds').innerText = String(secs).padStart(2, '0');
+    }, 1000);
+
+    setInterval(() => {
+        const randomPrizes = ["৳১২,২৬,০০০", "৳২৫,০০,০০০", "৳৫০,০০,০০০", "৳১,০০,০০,০০০"];
+        const randomNames = ["রহিম উদ্দিন", "করিম মিয়া", "জাকির হোসেন", "শরিফুল ইসলাম", "নাজমুল হক"];
+        let pName = randomNames[Math.floor(Math.random() * randomNames.length)];
+        let pPrize = randomPrizes[Math.floor(Math.random() * randomPrizes.length)];
+        showBottomLeftPopup(`🎉 ${pName} এইমাত্র ${pPrize} উত্তোলন করেছেন!`);
+    }, 22000);
+};
+
+function showBottomLeftPopup(text) {
+    playPopupSound();
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = "bg-slate-900/95 border border-emerald-500/60 text-emerald-300 px-4 py-3 rounded-xl shadow-2xl text-xs font-bold flex items-center pointer-events-auto transform transition duration-300";
+    toast.innerHTML = `<i class="fa-solid fa-volume-high text-amber-400 text-sm mr-2.5 animate-bounce"></i><span>${text}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 4500);
+}
+
+function addNotification(title, message, type = 'success', pkgData = null) {
+    clientNotifications.unshift({ title, message, type, pkgData, read: false });
+    saveData();
+    updateNotificationBadge();
+    playPopupSound();
+}
+
+function updateProfileUI() {
+    document.getElementById('barUserName').innerText = currentUser.name;
+    document.getElementById('barUserImg').src = currentUser.image;
+    document.getElementById('barReferCode').innerText = currentUser.myReferCode || "REF-1001";
+    document.getElementById('barUnclaimedBonus').innerText = "৳" + (currentUser.unclaimedBonus || 0);
+    document.getElementById('chatCurrentUserName').innerText = currentUser.name;
+}
+
+function copyReferCode() {
+    const code = currentUser.myReferCode || "REF-1001";
+    navigator.clipboard.writeText(code);
+    showBottomLeftPopup(`📋 রেফার কোড (${code}) কপি করা হয়েছে!`);
+}
+
+function claimReferBonus() {
+    let bonus = parseInt(currentUser.unclaimedBonus) || 0;
+    if (bonus <= 0) {
+        alert('আপনার ক্লেইম করার মতো কোনো রেফার বোনাস জমা নেই!');
+        return;
+    }
+
+    balance += bonus;
+    currentUser.claimedBonus = (parseInt(currentUser.claimedBonus) || 0) + bonus;
+    currentUser.unclaimedBonus = 0;
+
+    const userObj = registeredUsers.find(u => u.name === currentUser.name);
+    if (userObj) {
+        userObj.unclaimedBonus = 0;
+        userObj.claimedBonus = currentUser.claimedBonus;
+    }
+
+    changeCurrency();
+    updateProfileUI();
+    saveData();
+
+    document.getElementById('unclaimedBonusDisplay').innerText = "৳0";
+    document.getElementById('claimedTotalDisplay').innerText = "৳" + currentUser.claimedBonus;
+    document.getElementById('dashUserBalance').innerText = document.getElementById('userBalance').innerText;
+
+    showBottomLeftPopup(`🎁 ৳${bonus} রেফার বোনাস সফলভাবে মেইন ব্যালেন্সে যোগ হয়েছে!`);
+    alert(`🎉 অভিনন্দন! ৳${bonus} রেফার বোনাস ক্লেইম হয়ে আপনার মেইন ব্যালেন্সে যুক্ত হয়েছে!`);
+}
+
+// বাংলাদেশের সকল ব্যাংক ও আন্তর্জাতিক ব্যাংক তালিকা
+const countryBanksData = {
+    "Bangladesh": [
+        "bKash (Personal / Agent)", 
+        "Nagad (Personal / Agent)", 
+        "Rocket (DBBL)", 
+        "Upay", 
+        "Sonali Bank PLC", 
+        "BRAC Bank PLC", 
+        "Eastern Bank PLC (EBL)", 
+        "The City Bank PLC", 
+        "Dutch-Bangla Bank PLC (DBBL)", 
+        "Islami Bank Bangladesh PLC", 
+        "Prime Bank PLC", 
+        "Mutual Trust Bank PLC", 
+        "UCB PLC", 
+        "Trust Bank PLC", 
+        "Jamuna Bank PLC", 
+        "Mercantile Bank PLC",
+        "AB Bank PLC",
+        "Pubali Bank PLC",
+        "Uttara Bank PLC",
+        "Standard Chartered Bank Bangladesh",
+        "Agrani Bank PLC",
+        "Janata Bank PLC"
+    ],
+    "India": ["State Bank of India (SBI)", "HDFC Bank", "ICICI Bank", "Paytm / UPI", "Axis Bank", "Punjab National Bank"],
+    "Pakistan": ["HBL Bank Pakistan", "Meezan Bank", "Allied Bank", "Bank Alfalah"],
+    "Malaysia": ["Maybank Berhad", "CIMB Bank", "Public Bank Berhad", "Touch 'n Go eWallet", "RHB Bank"],
+    "Oman": ["Bank Muscat", "National Bank of Oman", "Bank Dhofar", "Oman Arab Bank"],
+    "Qatar": ["Qatar National Bank (QNB)", "Commercial Bank of Qatar", "Doha Bank", "Al Khaliji"],
+    "Saudi Arabia": ["Al Rajhi Bank", "NCB Commercial", "Riyad Bank", "Alinma Bank"],
+    "UAE": ["Emirates NBD", "ADCB Bank", "Dubai Islamic Bank", "First Abu Dhabi Bank (FAB)"],
+    "USA": ["Chase Bank USA", "Bank of America", "Wells Fargo", "Citibank"],
+    "UK": ["Barclays Bank UK", "HSBC UK", "Lloyds Bank", "NatWest"]
+};
+
+function scrollToSection(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleTheme() {
+    const html = document.getElementById('htmlRoot');
+    const icon = document.getElementById('themeIcon');
+    if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        icon.className = "fa-solid fa-sun";
+    } else {
+        html.classList.add('dark');
+        icon.className = "fa-solid fa-moon";
+    }
+}
+
+function loadWithdrawBanks() {
+    const country = document.getElementById('withdrawCountry').value;
+    const bankSelect = document.getElementById('wdBankSelect');
+    bankSelect.innerHTML = '<option value="">-- ব্যাংক সিলেক্ট করুন --</option>';
+    if (!country || !countryBanksData[country]) return;
+    countryBanksData[country].forEach(bank => {
+        let opt = document.createElement('option');
+        opt.value = bank;
+        opt.innerText = bank;
+        bankSelect.appendChild(opt);
+    });
+}
+
+// অ্যাকাউন্ট নম্বর লিখলে অটো একাউন্ট হোল্ডারের নাম দেখানোর ফাংশন
+function lookupAccountHolder(accNumber) {
+    const nameField = document.getElementById('wdAccHolderName');
+    if (!accNumber || accNumber.length < 4) {
+        nameField.value = "";
+        return;
+    }
+    const matched = registeredUsers.find(u => u.phone.includes(accNumber));
+    if (matched) {
+        nameField.value = matched.name + " (Verified Client)";
+    } else if (accNumber.length >= 10) {
+        // রিয়েল-টাইম সিমুলেটেড অ্যাকাউন্ট হোল্ডার নাম জেনারেটর
+        const sampleNames = ["মোহাম্মদ রহিম উদ্দিন", "আব্দুল করিম মিয়া", "নাজমুল হাসান", "শরিফুল ইসলাম", "তানভীর মাহমুদ", "রাকিবুল ইসলাম", "মেহেদী হাসান", "সুমাইয়া আক্তার"];
+        let hash = 0;
+        for (let i = 0; i < accNumber.length; i++) hash += accNumber.charCodeAt(i);
+        nameField.value = sampleNames[hash % sampleNames.length] + " (Verified Account)";
+    } else {
+        nameField.value = "যাচাই করা হচ্ছে...";
+    }
+}
+
+// ডিপোজিট রিকোয়েস্ট (স্ক্রিনশটসহ)
+function submitDepositRequest() {
+    const method = document.getElementById('depMethod').value;
+    const senderNo = document.getElementById('depSenderNo').value.trim();
+    const trxId = document.getElementById('depTrxId').value.trim();
+    const amount = parseInt(document.getElementById('depAmount').value);
+    const fileInput = document.getElementById('depScreenshotFile');
+
+    if (!senderNo || !trxId || isNaN(amount) || amount <= 0) {
+        alert('দয়া করে সকল তথ্য ও সঠিক পরিমাণ পূরণ করুন!');
+        return;
+    }
+
+    if (!fileInput.files || !fileInput.files[0]) {
+        alert('❌ পেমেন্ট নিশ্চিত করতে স্ক্রিনশট (Screenshot) আপলোড করা বাধ্যতামূলক!');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const screenshotBase64 = e.target.result;
+
+        depositRequests.push({ id: Date.now(), method, senderNo, trxId, amount, screenshot: screenshotBase64, status: 'Pending' });
+        depositHistory.push({ method, trxId, amount, screenshot: screenshotBase64, status: 'Pending', date: new Date().toLocaleDateString('en-GB') });
+        saveData();
+
+        showBottomLeftPopup(`📥 ৳${amount} ডিপোজিট রিকোয়েস্ট ও স্ক্রিনশট পাঠানো হয়েছে!`);
+        alert('✅ ডিপোজিট রিকোয়েস্ট ও স্ক্রিনশট সফলভাবে সাবমিট হয়েছে!');
+        
+        document.getElementById('depSenderNo').value = '';
+        document.getElementById('depTrxId').value = '';
+        document.getElementById('depAmount').value = '';
+        document.getElementById('depScreenshotFile').value = '';
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+}
+
+function submitWithdrawRequest() {
+    const country = document.getElementById('withdrawCountry').value;
+    const bank = document.getElementById('wdBankSelect').value;
+    const acc = document.getElementById('wdAccNumber').value.trim();
+    const holderName = document.getElementById('wdAccHolderName').value.trim();
+    const amount = parseInt(document.getElementById('wdAmount').value);
+
+    if (!country || !bank || !acc || isNaN(amount) || amount <= 0) {
+        alert('দয়া করে উইথড্র এর সকল তথ্য পূরণ করুন!');
+        return;
+    }
+
+    if (amount > balance) {
+        alert('❌ আপনার অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই!');
+        return;
+    }
+
+    balance -= amount;
+    changeCurrency();
+    document.getElementById('dashUserBalance').innerText = document.getElementById('userBalance').innerText;
+
+    withdrawRequests.push({ id: Date.now(), country, bank, acc, holderName, amount, status: 'Pending' });
+    withdrawHistory.push({ bank, acc, holderName, amount, status: 'Pending', date: new Date().toLocaleDateString('en-GB') });
+    saveData();
+
+    showBottomLeftPopup(`📤 ৳${amount} উইথড্র রিকোয়েস্ট সাবমিট হয়েছে!`);
+    alert(`📤 আপনার ৳${amount} উইথড্র রিকোয়েস্ট সাবমিট হয়েছে (${holderName})।`);
+    
+    document.getElementById('wdAccNumber').value = '';
+    document.getElementById('wdAccHolderName').value = '';
+    document.getElementById('wdAmount').value = '';
+}
+
+// Spin Wheel
+const wheelSectors = [
+    { label: "৳১২,২৬,০০০", color: "#f59e0b" },
+    { label: "পরের বার", color: "#ef4444" },
+    { label: "৳১৫,০০,০০০", color: "#10b981" },
+    { label: "পরের বার", color: "#3b82f6" },
+    { label: "৳২০,০০,০০০", color: "#8b5cf6" },
+    { label: "পরের বার", color: "#64748b" },
+    { label: "ফ্রি টিকিট", color: "#ec4899" },
+    { label: "পরের বার", color: "#475569" }
+];
+
+function drawWheel() {
+    const canvas = document.getElementById('wheelCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 130;
+    const totalSectors = wheelSectors.length;
+    const arcSize = (2 * Math.PI) / totalSectors;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    wheelSectors.forEach((sector, i) => {
+        const angle = i * arcSize;
+        ctx.beginPath();
+        ctx.fillStyle = sector.color;
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, angle, angle + arcSize);
+        ctx.lineTo(centerX, centerY);
+        ctx.fill();
+        ctx.save();
+
+        ctx.translate(centerX, centerY);
+        ctx.rotate(angle + arcSize / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 12px sans-serif";
+        ctx.fillText(sector.label, radius - 15, 5);
+        ctx.restore();
+    });
+}
+
+function openSpinModal() {
+    checkSpinAvailability();
+    document.getElementById('spinModal').classList.remove('hidden');
+    drawWheel();
+}
+function closeSpinModal() { document.getElementById('spinModal').classList.add('hidden'); }
+
+function checkSpinAvailability() {
+    const lastSpin = localStorage.getItem('lotto_last_spin');
+    const spinBtn = document.getElementById('spinBtn');
+    const timerText = document.getElementById('spinTimerText');
+
+    if (lastSpin) {
+        const diff = Date.now() - parseInt(lastSpin);
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        if (diff < twentyFourHours) {
+            const timeLeft = twentyFourHours - diff;
+            const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+            const minsLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            spinBtn.disabled = true;
+            spinBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            timerText.innerText = `⏳ পরবর্তী স্পিনের জন্য অপেক্ষা করুন: ${hoursLeft} ঘণ্টা ${minsLeft} মিনিট বাকি।`;
+            return false;
+        }
+    }
+    spinBtn.disabled = false;
+    spinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    timerText.innerText = "✨ আপনি এখন দৈনিক স্পিন করতে পারবেন!";
+    return true;
+}
+
+let currentRotation = 0;
+function spinTheWheel() {
+    if (!checkSpinAvailability()) {
+        alert("২৪ ঘণ্টার মধ্যে ইতিমধ্যে একবার স্পিন করেছেন!");
+        return;
+    }
+
+    const canvas = document.getElementById('wheelCanvas');
+    const randomDegree = Math.floor(1800 + Math.random() * 1800);
+    currentRotation += randomDegree;
+    canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+    setTimeout(() => {
+        const actualDeg = currentRotation % 360;
+        const sectorAngle = 360 / wheelSectors.length;
+        const winningIndex = Math.floor((360 - (actualDeg % 360)) / sectorAngle) % wheelSectors.length;
+        const prize = wheelSectors[winningIndex].label;
+
+        localStorage.setItem('lotto_last_spin', Date.now().toString());
+
+        if (prize.includes("পরের বার")) {
+            alert("দুঃখিত! পরের বার আবার চেষ্টা করুন।");
+        } else if (prize.includes("ফ্রি টিকিট")) {
+            showBottomLeftPopup("🎟️ অভিনন্দন! আপনি একটি ফ্রি লাকি টিকিট জিতেছেন!");
+        } else {
+            let amount = parseInt(prize.replace(/[^\d]/g, '')) || 0;
+            balance += amount;
+            sessionTotalWon = (sessionTotalWon || 0) + amount;
+            winningDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            changeCurrency();
+            saveData();
+            showBottomLeftPopup(`🎉 স্পিন হুইল থেকে ${prize} জিতেছেন!`);
+        }
+        checkSpinAvailability();
+    }, 3000);
+}
+
+let tempPkg = {};
+function openPurchaseModal(pkgName, price, count, tier) {
+    tempPkg = { pkgName, price, count, tier };
+    const prefix = packageRules[tier]?.prefix || "STR";
+    document.getElementById('purchaseModalPkgSubtitle').innerText = `নির্বাচিত প্যাকেজ: ${pkgName} (কোড ফরম্যাট: ${prefix}-XXXX)`;
+    document.getElementById('buyerAdminCode').placeholder = `যেমন: ${prefix}-1234`;
+    document.getElementById('purchaseModal').classList.remove('hidden');
+}
+function closePurchaseModal() { document.getElementById('purchaseModal').classList.add('hidden'); }
+
+function submitPackageApplication() {
+    const name = document.getElementById('buyerName').value.trim();
+    const phone = document.getElementById('buyerPhone').value.trim();
+    const adminCode = document.getElementById('buyerAdminCode').value.trim().toUpperCase();
+    const fileInput = document.getElementById('buyerImageFile');
+
+    if (!name || !phone || !adminCode) {
+        alert('দয়া করে নাম, মোবাইল নম্বর এবং এই প্যাকেজের সিক্রেট কোড দিন!');
+        return;
+    }
+
+    const tierCodes = packageAdminCodes[tempPkg.tier] || [];
+    const codeIndex = tierCodes.indexOf(adminCode);
+
+    if (codeIndex === -1) {
+        alert(`❌ ভুল কোড অথবা এই কোডটি "${tempPkg.pkgName}" এর জন্য প্রযোজ্য নয়!`);
+        return;
+    }
+
+    if (!fileInput.files || !fileInput.files[0]) {
+        alert('❌ প্যাকেজ কিনতে আপনার ছবি আপলোড করা বাধ্যতামূলক (Must)!');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64Img = e.target.result;
+        tierCodes.splice(codeIndex, 1);
+        packageAdminCodes[tempPkg.tier] = tierCodes;
+
+        currentUser.name = name;
+        currentUser.phone = phone;
+        currentUser.image = base64Img;
+        updateProfileUI();
+
+        pendingApplications.push({
+            id: Date.now(),
+            name,
+            phone,
+            image: base64Img,
+            code: adminCode,
+            ...tempPkg,
+            status: 'Pending'
+        });
+
+        saveData();
+        showBottomLeftPopup(`✅ ${tempPkg.pkgName} এর আবেদন পাঠানো হয়েছে!`);
+        alert('✅ কোড ভেরিফাই ও ছবি সহ আবেদন অ্যাডমিনের কাছে পাঠানো হয়েছে!');
+        closePurchaseModal();
+        renderAdminTables();
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+}
+
+function openUserDashboard(defaultTab = 'deposit') {
+    document.getElementById('dashUserName').innerText = currentUser.name;
+    document.getElementById('dashUserPhone').innerText = currentUser.phone;
+    document.getElementById('dashUserImg').src = currentUser.image;
+    document.getElementById('dashUserBalance').innerText = document.getElementById('userBalance').innerText;
+    document.getElementById('dashReferCode').innerText = currentUser.myReferCode || "REF-1001";
+    document.getElementById('unclaimedBonusDisplay').innerText = "৳" + (currentUser.unclaimedBonus || 0);
+    document.getElementById('claimedTotalDisplay').innerText = "৳" + (currentUser.claimedBonus || 0);
+
+    switchProfileTab(defaultTab === 'profile' ? 'deposit' : defaultTab);
+    document.getElementById('userDashboardModal').classList.remove('hidden');
+}
+function closeUserDashboard() { document.getElementById('userDashboardModal').classList.add('hidden'); }
+
+function switchProfileTab(tab) {
+    document.getElementById('profSecDeposit').classList.add('hidden');
+    document.getElementById('profSecWithdraw').classList.add('hidden');
+    document.getElementById('profSecHistory').classList.add('hidden');
+    document.getElementById('profSecRefer').classList.add('hidden');
+
+    document.getElementById('profTabDep').className = 'bg-slate-800 text-slate-300 font-bold py-2 rounded-lg text-xs';
+    document.getElementById('profTabWd').className = 'bg-slate-800 text-slate-300 font-bold py-2 rounded-lg text-xs';
+    document.getElementById('profTabHist').className = 'bg-slate-800 text-slate-300 font-bold py-2 rounded-lg text-xs';
+    document.getElementById('profTabRef').className = 'bg-slate-800 text-slate-300 font-bold py-2 rounded-lg text-xs';
+
+    if (tab === 'deposit') {
+        document.getElementById('profSecDeposit').classList.remove('hidden');
+        document.getElementById('profTabDep').className = 'bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs';
+    } else if (tab === 'withdraw') {
+        document.getElementById('profSecWithdraw').classList.remove('hidden');
+        document.getElementById('profTabWd').className = 'bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-xs';
+    } else if (tab === 'history') {
+        document.getElementById('profSecHistory').classList.remove('hidden');
+        document.getElementById('profTabHist').className = 'bg-blue-600 text-white font-bold py-2 rounded-lg text-xs';
+        switchHistorySubTab('all');
+    } else if (tab === 'refer') {
+        document.getElementById('profSecRefer').classList.remove('hidden');
+        document.getElementById('profTabRef').className = 'bg-purple-600 text-white font-bold py-2 rounded-lg text-xs';
+        renderReferList();
+    }
+}
+
+function switchHistorySubTab(sub) {
+    document.getElementById('subHistAll').className = sub === 'all' ? 'bg-blue-600 text-white px-3 py-1 rounded font-bold' : 'bg-slate-800 text-slate-300 px-3 py-1 rounded font-bold';
+    document.getElementById('subHistDep').className = sub === 'deposit' ? 'bg-emerald-600 text-white px-3 py-1 rounded font-bold' : 'bg-slate-800 text-slate-300 px-3 py-1 rounded font-bold';
+    document.getElementById('subHistWd').className = sub === 'withdraw' ? 'bg-amber-600 text-white px-3 py-1 rounded font-bold' : 'bg-slate-800 text-slate-300 px-3 py-1 rounded font-bold';
+    document.getElementById('subHistTkt').className = sub === 'ticket' ? 'bg-purple-600 text-white px-3 py-1 rounded font-bold' : 'bg-slate-800 text-slate-300 px-3 py-1 rounded font-bold';
+
+    const area = document.getElementById('historyContentArea');
+    let html = '';
+
+    if (sub === 'all' || sub === 'deposit') {
+        depositHistory.forEach(d => {
+            let st = d.status === 'Approved' ? '<span class="text-emerald-400 font-bold">[Success]</span>' : (d.status === 'Rejected' ? '<span class="text-rose-400 font-bold">[Rejected]</span>' : '<span class="text-amber-400 font-bold">[Pending]</span>');
+            html += `<div class="bg-slate-900 p-2 rounded border border-slate-800">📥 <strong>ডিপোজিট:</strong> ${d.method} | TrxID: ${d.trxId} | ৳${d.amount} | ${st} (${d.date})</div>`;
+        });
+    }
+    if (sub === 'all' || sub === 'withdraw') {
+        withdrawHistory.forEach(w => {
+            let st = w.status === 'Success' ? '<span class="text-emerald-400 font-bold">[Success]</span>' : (w.status === 'Rejected' ? '<span class="text-rose-400 font-bold">[Rejected]</span>' : '<span class="text-amber-400 font-bold">[Pending]</span>');
+            html += `<div class="bg-slate-900 p-2 rounded border border-slate-800">📤 <strong>উইথড্র:</strong> ${w.bank} (${w.acc} - ${w.holderName || ''}) | ৳${w.amount} | ${st} (${w.date})</div>`;
+        });
+    }
+    if (sub === 'all' || sub === 'ticket') {
+        ticketHistory.forEach(t => {
+            html += `<div class="bg-slate-900 p-2 rounded border border-slate-800">🎟️ <strong>লটারি উইন:</strong> ${t.pkg} | জিতিয়েছেন: <strong class="text-emerald-400">৳${t.won}</strong></div>`;
+        });
+    }
+
+    area.innerHTML = html || `<p class="text-slate-500">কোনো লেনদেন হিস্ট্রি পাওয়া যায়নি।</p>`;
+}
+
+function renderReferList() {
+    const area = document.getElementById('referListArea');
+    if (referHistory.length === 0) {
+        area.innerHTML = `<p>এখনো কোনো রেফার হিস্ট্রি নেই।</p>`;
+        return;
+    }
+    let h = '';
+    referHistory.forEach(r => {
+        h += `<div class="bg-slate-900 p-2 rounded border border-slate-800 flex justify-between"><span>👤 ${r.referredName}</span><strong class="text-emerald-400">+৳${r.commission}</strong></div>`;
+    });
+    area.innerHTML = h;
+}
+
+function downloadClientReport() {
+    const reportText = `=== CLIENT REPORT ===\nName: ${currentUser.name}\nPhone: ${currentUser.phone}\nReferral Code: ${currentUser.myReferCode}\nClaimed Refer Bonus: BDT ${currentUser.claimedBonus}\nBalance: BDT ${balance}\n====================`;
+    const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Client_Report_${currentUser.phone}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showBottomLeftPopup(`📥 প্রোফাইল রিপোর্ট ডাউনলোড হয়েছে!`);
+}
+
+function downloadCertificateAsImage() {
+    const canvas = document.getElementById('certCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = currentUser.image;
+
+    const renderAndSave = (loadedImg) => {
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 8;
+        ctx.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
+        ctx.lineWidth = 2;
+        ctx.strokeRect(26, 26, canvas.width - 52, canvas.height - 52);
+
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = "bold 28px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("GLOBAL LOTTO CHAMPION", canvas.width / 2, 70);
+
+        if (loadedImg) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, 130, 42, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(loadedImg, (canvas.width / 2) - 42, 88, 84, 84);
+            ctx.restore();
+
+            ctx.strokeStyle = "#f59e0b";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, 130, 42, 0, Math.PI * 2, true);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 20px sans-serif";
+        ctx.fillText(currentUser.name, canvas.width / 2, 198);
+
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = "13px monospace";
+        ctx.fillText(currentUser.phone, canvas.width / 2, 218);
+
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "12px sans-serif";
+        ctx.fillText(`Verification ID: ${document.getElementById('certVerifyId').innerText}   |   Winning Date: ${winningDate}`, canvas.width / 2, 248);
+
+        ctx.fillStyle = "#34d399";
+        ctx.font = "bold 24px sans-serif";
+        ctx.fillText(`Total Winning Prize: ${document.getElementById('certPrizeAmount').innerText}`, canvas.width / 2, 288);
+
+        ctx.fillStyle = "#fcd34d";
+        ctx.font = "italic 22px Georgia, serif";
+        ctx.fillText("Somchai Prasert", 140, 365);
+        ctx.fillText("Dr. Rafiqul", canvas.width / 2, 365);
+        ctx.fillText("Tanvir Ahmed", canvas.width - 140, 365);
+
+        ctx.strokeStyle = "#64748b";
+        ctx.lineWidth = 1;
+        [140, canvas.width / 2, canvas.width - 140].forEach(x => {
+            ctx.beginPath();
+            ctx.moveTo(x - 65, 375);
+            ctx.lineTo(x + 65, 375);
+            ctx.stroke();
+        });
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 11px sans-serif";
+        ctx.fillText("Mr. Somchai Prasert", 140, 392);
+        ctx.fillText("Dr. Rafiqul Islam", canvas.width / 2, 392);
+        ctx.fillText("Engr. Tanvir Ahmed", canvas.width - 140, 392);
+
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "10px sans-serif";
+        ctx.fillText("Chairman & Global CEO", 140, 408);
+        ctx.fillText("Country Director (BD)", canvas.width / 2, 408);
+        ctx.fillText("Chief Lottery Commissioner", canvas.width - 140, 408);
+
+        const imageURL = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = imageURL;
+        a.download = `Certificate_${currentUser.phone}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showBottomLeftPopup('📥 সার্টিফিকেট ডাউনলোড হয়েছে!');
+    };
+
+    img.onload = () => renderAndSave(img);
+    img.onerror = () => renderAndSave(null);
+}
+
+function switchAdminTab(tab) {
+    ['adminSecPackages', 'adminSecDeposits', 'adminSecWithdraws', 'adminSecChats', 'adminSecNotices', 'adminSecUsers'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+    });
+    ['admTabPkg', 'admTabDep', 'admTabWd', 'admTabChat', 'admTabNotif', 'admTabUsr'].forEach(id => {
+        document.getElementById(id).className = 'bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded-lg text-xs';
+    });
+
+    if (tab === 'packages') {
+        document.getElementById('adminSecPackages').classList.remove('hidden');
+        document.getElementById('admTabPkg').className = 'bg-purple-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs';
+        renderAdminTables();
+    } else if (tab === 'deposits') {
+        document.getElementById('adminSecDeposits').classList.remove('hidden');
+        document.getElementById('admTabDep').className = 'bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs';
+        renderDepositTable();
+    } else if (tab === 'withdraws') {
+        document.getElementById('adminSecWithdraws').classList.remove('hidden');
+        document.getElementById('admTabWd').className = 'bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs';
+        renderWithdrawTable();
+    } else if (tab === 'chats') {
+        document.getElementById('adminSecChats').classList.remove('hidden');
+        document.getElementById('admTabChat').className = 'bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs';
+        renderAdminClientChatList();
+    } else if (tab === 'notices') {
+        document.getElementById('adminSecNotices').classList.remove('hidden');
+        document.getElementById('admTabNotif').className = 'bg-purple-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs';
+        renderActiveCodesDisplay();
+    } else if (tab === 'users') {
+        document.getElementById('adminSecUsers').classList.remove('hidden');
+        document.getElementById('admTabUsr').className = 'bg-blue-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs';
+        renderUsersTable();
+    }
+}
+
+function renderActiveCodesDisplay() {
+    const container = document.getElementById('activeCodesList');
+    if (!container) return;
+    let html = '';
+    Object.keys(packageRules).forEach(tier => {
+        const codes = packageAdminCodes[tier] || [];
+        html += `<div><span class="text-amber-300 font-bold">${packageRules[tier].label}:</span> ${codes.length > 0 ? codes.join(', ') : '<span class="text-slate-500">কোনো কোড নেই</span>'}</div>`;
+    });
+    container.innerHTML = html;
+}
+
+function generateNewSecretCode() {
+    const selectedTier = document.getElementById('adminCodePkgSelect').value;
+    const rule = packageRules[selectedTier];
+    const randomCode = `${rule.prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    document.getElementById('generatedCodeDisplay').value = randomCode;
+    if (!packageAdminCodes[selectedTier]) {
+        packageAdminCodes[selectedTier] = [];
+    }
+    packageAdminCodes[selectedTier].push(randomCode);
+    saveData();
+    renderActiveCodesDisplay();
+    showBottomLeftPopup(`🔑 ${rule.label} এর জন্য কোড তৈরি হয়েছে: ${randomCode}`);
+}
+
+function renderAdminTables() {
+    const pTbody = document.getElementById('adminPackageRequestsTable');
+    if (!pTbody) return;
+    if (pendingApplications.length === 0) {
+        pTbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500">কোনো আবেদন নেই</td></tr>`;
+        return;
+    }
+
+    let h = '';
+    pendingApplications.forEach((app, i) => {
+        const isApproved = app.status === 'Approved';
+        h += `<tr>
+            <td class="p-2"><img src="${app.image}" class="w-10 h-10 rounded-full object-cover border border-amber-400"></td>
+            <td class="p-2">${app.name}<br><span class="text-amber-400 font-mono">${app.phone}</span></td>
+            <td class="p-2 text-amber-400 font-bold">${app.pkgName}</td>
+            <td class="p-2 font-mono text-emerald-400">${app.code}</td>
+            <td class="p-2 font-bold text-emerald-400">৳${app.price}</td>
+            <td class="p-2 text-right space-x-1">
+                ${isApproved ? 
+                    `<span class="text-emerald-400 font-bold text-xs"><i class="fa-solid fa-check-circle mr-1"></i> Approved</span>` :
+                    `<button onclick="approvePkg(${i})" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded font-bold">Approve</button>
+                     <button onclick="rejectPkg(${i})" class="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-1 rounded font-bold">Reject</button>`
+                }
+            </td>
+        </tr>`;
+    });
+    pTbody.innerHTML = h;
+}
+
+// ডিপোজিট টেবিলে স্ক্রিনশট প্রিভিউসহ
+function renderDepositTable() {
+    const tbody = document.getElementById('adminDepositTable');
+    if (depositRequests.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">কোনো ডিপোজিট রিকোয়েস্ট নেই</td></tr>`;
+        return;
+    }
+    let h = '';
+    depositRequests.forEach((d, i) => {
+        let statusText = d.status === 'Approved' ? '<span class="text-emerald-400 font-bold">Success</span>' : (d.status === 'Rejected' ? '<span class="text-rose-400 font-bold">Rejected</span>' : '<span class="text-amber-400 font-bold">Pending</span>');
+        let screenshotBtn = d.screenshot ? `<button onclick="viewScreenshot('${d.screenshot}')" class="bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded text-[10px] font-bold"><i class="fa-solid fa-eye"></i> দেখুন</button>` : '<span class="text-slate-500">নেই</span>';
+        
+        h += `<tr>
+            <td class="p-2 font-bold text-emerald-400">${d.method}</td>
+            <td class="p-2">${d.senderNo}</td>
+            <td class="p-2 font-mono">${d.trxId}</td>
+            <td class="p-2">${screenshotBtn}</td>
+            <td class="p-2 font-bold">৳${d.amount}</td>
+            <td class="p-2">${statusText}</td>
+            <td class="p-2 text-right space-x-1">
+                <button onclick="updateDepositStatus(${i}, 'Approved')" class="bg-emerald-600 text-white px-2 py-1 rounded text-[10px] font-bold">Approve</button>
+                <button onclick="updateDepositStatus(${i}, 'Rejected')" class="bg-rose-600 text-white px-2 py-1 rounded text-[10px] font-bold">Reject</button>
+            </td>
+        </tr>`;
+    });
+    tbody.innerHTML = h;
+}
+
+function viewScreenshot(base64Img) {
+    document.getElementById('modalScreenshotImg').src = base64Img;
+    document.getElementById('screenshotModal').classList.remove('hidden');
+}
+
+function updateDepositStatus(i, status) {
+    let d = depositRequests[i];
+    d.status = status;
+    if (depositHistory[i]) {
+        depositHistory[i].status = status;
+    }
+
+    if (status === 'Approved') {
+        balance += parseInt(d.amount) || 0;
+        changeCurrency();
+        addNotification("ডিপোজিট সফল", `আপনার ৳${d.amount} ডিপোজিট অনুমোদিত হয়েছে এবং অটো ব্যালেন্সে যোগ হয়েছে।`, 'success');
+    } else {
+        addNotification("ডিপোজিট বাতিল", `আপনার ৳${d.amount} ডিপোজিট রিকোয়েস্ট রিজেক্ট করা হয়েছে।`, 'error');
+    }
+
+    saveData();
+    renderDepositTable();
+}
+
+function renderWithdrawTable() {
+    const tbody = document.getElementById('adminWithdrawTable');
+    if (withdrawRequests.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500">কোনো উইথড্র রিকোয়েস্ট নেই</td></tr>`;
+        return;
+    }
+    let h = '';
+    withdrawRequests.forEach((w, i) => {
+        let stColor = w.status === 'Success' ? 'text-emerald-400' : (w.status === 'Rejected' ? 'text-rose-400' : 'text-amber-400');
+        h += `<tr>
+            <td class="p-2 font-bold text-amber-400">${w.country} (${w.bank})</td>
+            <td class="p-2 font-mono">${w.acc}<br><span class="text-emerald-400 text-[10px]">${w.holderName || ''}</span></td>
+            <td class="p-2 font-bold text-rose-400">৳${w.amount}</td>
+            <td class="p-2 font-bold ${stColor}">[${w.status}]</td>
+            <td class="p-2 text-right space-x-1">
+                <button onclick="updateWithdrawStatus(${i}, 'Success')" class="bg-emerald-600 text-white px-2 py-1 rounded text-[10px] font-bold">Success</button>
+                <button onclick="updateWithdrawStatus(${i}, 'Rejected')" class="bg-rose-600 text-white px-2 py-1 rounded text-[10px] font-bold">Reject</button>
+            </td>
+        </tr>`;
+    });
+    tbody.innerHTML = h;
+}
+
+function updateWithdrawStatus(i, status) {
+    let w = withdrawRequests[i];
+    w.status = status;
+    if (withdrawHistory[i]) {
+        withdrawHistory[i].status = status;
+    }
+
+    if (status === 'Rejected') {
+        balance += parseInt(w.amount) || 0;
+        changeCurrency();
+        addNotification("উইথড্র রিজেক্ট", `আপনার ৳${w.amount} উইথড্র রিকোয়েস্ট রিজেক্ট হওয়ায় ব্যালেন্সে ফেরত দেওয়া হয়েছে।`, 'error');
+    } else {
+        addNotification("উইথড্র সফল", `আপনার ৳${w.amount} উইথড্র সফলভাবে সম্পন্ন হয়েছে।`, 'success');
+    }
+
+    saveData();
+    renderWithdrawTable();
+}
+
+function renderUsersTable() {
+    const tbody = document.getElementById('adminUsersTable');
+    let h = '';
+    registeredUsers.forEach((u, i) => {
+        h += `<tr>
+            <td class="p-2">${u.name}</td>
+            <td class="p-2 font-mono">${u.phone}</td>
+            <td class="p-2 font-mono text-amber-400">${u.myReferCode || 'REF-1001'}</td>
+            <td class="p-2 font-bold text-emerald-400">৳${(u.unclaimedBonus || 0) + (u.claimedBonus || 0)}</td>
+            <td class="p-2 text-right"><input type="text" id="editPass_${i}" value="${u.password}" class="w-28 bg-slate-900 border border-slate-700 px-2 py-1 rounded text-amber-400 font-mono font-bold"> <button onclick="updateUserPassword(${i})" class="bg-blue-600 text-white px-2 py-1 rounded text-[10px]">সেভ</button></td>
+        </tr>`;
+    });
+    tbody.innerHTML = h;
+}
+
+function updateUserPassword(i) {
+    const newPass = document.getElementById(`editPass_${i}`).value.trim();
+    if (!newPass) return;
+    registeredUsers[i].password = newPass;
+    saveData();
+    showBottomLeftPopup('✅ পাসওয়ার্ড আপডেট হয়েছে!');
+}
+
+function updateAdminNotice() {
+    const val = document.getElementById('adminNoticeInput').value.trim();
+    if (!val) return;
+    adminNoticeText = val;
+    saveData();
+    document.getElementById('adminNoticeTicker').innerText = adminNoticeText;
+    showBottomLeftPopup('✅ নোটিশ আপডেট হয়েছে!');
+}
+
+function approvePkg(i) {
+    pendingApplications[i].status = 'Approved';
+    const app = pendingApplications[i];
+    currentUser.name = app.name;
+    currentUser.phone = app.phone;
+    currentUser.image = app.image;
+    updateProfileUI();
+
+    saveData();
+    renderAdminTables();
+    addNotification("প্যাকেজ অনুমোদিত", `আপনার "${app.pkgName}" প্যাকেজ অনুমোদিত হয়েছে।`, 'success', app);
+    showBottomLeftPopup(`✅ ${app.pkgName} এপ্রুভ হয়েছে!`);
+}
+
+function rejectPkg(i) {
+    pendingApplications.splice(i, 1);
+    saveData();
+    renderAdminTables();
+    showBottomLeftPopup('❌ আবেদন রিজেক্ট করা হয়েছে!');
+}
+
+function updateNotificationBadge() {
+    const b = document.getElementById('headerNotifBadge');
+    if (!b) return;
+    let unreadCount = clientNotifications.filter(n => !n.read).length;
+    if (unreadCount > 0) {
+        b.innerText = unreadCount;
+        b.classList.remove('hidden');
+    } else {
+        b.classList.add('hidden');
+    }
+}
+
+function openClientNotifications() {
+    let html = '';
+    if (clientNotifications.length === 0) {
+        html = `<p class="text-slate-500 text-center py-4">কোনো নোটিফিকেশন নেই।</p>`;
+    } else {
+        clientNotifications.forEach((n, idx) => {
+            n.read = true;
+            let bgClass = n.type === 'success' && n.pkgData ? "bg-emerald-950 p-3 rounded-xl cursor-pointer hover:bg-emerald-900 transition" : "bg-slate-950 p-3 rounded-xl";
+            
+            if (n.type === 'success' && n.pkgData) {
+                html += `<div onclick='launchGameFromNotif(${idx})' class="${bgClass}"><strong class="text-emerald-400">${n.title}</strong><p class="text-slate-200">${n.message}</p><span class="text-amber-400 underline text-[11px] block mt-1">▶️ খেলতে এখানে ক্লিক করুন</span></div>`;
+            } else {
+                html += `<div class="${bgClass}"><strong class="text-amber-400">${n.title}</strong><p class="text-slate-200">${n.message}</p></div>`;
+            }
+        });
+    }
+    saveData();
+    updateNotificationBadge();
+    document.getElementById('clientNotifList').innerHTML = html;
+    document.getElementById('clientNotifModal').classList.remove('hidden');
+}
+function closeClientNotifications() { document.getElementById('clientNotifModal').classList.add('hidden'); }
+
+function launchGameFromNotif(idx) {
+    const n = clientNotifications[idx];
+    if (n && n.pkgData) {
+        closeClientNotifications();
+        selectPackage(n.pkgData.pkgName, n.pkgData.price, n.pkgData.count, n.pkgData.tier);
+    }
+}
+
+// প্যাকেজ ১ এ ঠিক ১২,২৬,০০০ টাকা ক্যাপিং লজিক
+function generateExactCardPrizes(count, exactTotal) {
+    let prizes = new Array(count).fill(0);
+    let winningIndices = [];
+    let numWinners = Math.max(2, Math.floor(count * 0.75));
+    let allIndices = Array.from({ length: count }, (_, i) => i);
+
+    for (let i = allIndices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allIndices[i], allIndices[j]] = [allIndices[j], allIndices[i]];
+    }
+    winningIndices = allIndices.slice(0, numWinners);
+
+    const unit = 1000;
+    const totalUnits = Math.floor(exactTotal / unit);
+    let weights = winningIndices.map(() => Math.random() + 0.3);
+    let weightSum = weights.reduce((a, b) => a + b, 0);
+
+    let allocatedUnits = 0;
+    for (let i = 0; i < numWinners; i++) {
+        let idx = winningIndices[i];
+        if (i === numWinners - 1) {
+            prizes[idx] = (totalUnits - allocatedUnits) * unit;
+        } else {
+            let u = Math.max(1, Math.floor((weights[i] / weightSum) * totalUnits));
+            if (allocatedUnits + u >= totalUnits) {
+                u = Math.max(1, totalUnits - allocatedUnits - (numWinners - 1 - i));
+            }
+            prizes[idx] = u * unit;
+            allocatedUnits += u;
+        }
+    }
+    return prizes;
+}
+
+let currentPackageSessionWon = 0;
+
+function selectPackage(name, price, count, tier) {
+    const rule = packageRules[tier] || packageRules.starter;
+    const exactTotal = rule.totalPrize;
+    currentPackageSessionWon = 0;
+
+    document.getElementById('activePkgName').innerText = `${name} (${count}টি কার্ড - মোট ৳${exactTotal.toLocaleString()})`;
+    document.getElementById('activePkgPrice').innerText = "৳" + price;
+    document.getElementById('currentPkgWonAmount').innerText = "৳০";
+
+    const cardAmounts = generateExactCardPrizes(count, exactTotal);
+
+    let grid = '';
+    for (let i = 0; i < count; i++) {
+        let amt = cardAmounts[i];
+        let prizeLabel = amt > 0 ? "৳" + amt.toLocaleString() : "পরের বার চেষ্টা করুন";
+        grid += `<div onclick="revealCard(this, '${prizeLabel}', ${amt}, '${name}')" class="bg-slate-900 border border-slate-700 hover:border-amber-500/60 h-24 rounded-xl flex flex-col items-center justify-center p-2 text-center cursor-pointer transition"><span class="text-xs text-amber-400 font-bold">কার্ড #${i + 1}</span><span class="text-xs text-slate-400 card-content mt-1">স্ক্র্যাচ করুন</span></div>`;
+    }
+    document.getElementById('packageCardsGrid').innerHTML = grid;
+    document.getElementById('mainContainer').classList.add('hidden');
+    document.getElementById('checkoutView').classList.remove('hidden');
+}
+
+function revealCard(el, prizeLabel, amount, pkgName) {
+    if (el.dataset.scratched === "true") return;
+    el.dataset.scratched = "true";
+
+    const contentEl = el.querySelector('.card-content');
+    contentEl.innerText = prizeLabel;
+
+    if (amount > 0) {
+        el.classList.add('bg-emerald-950/60', 'border-emerald-500');
+        contentEl.classList.remove('text-slate-400');
+        contentEl.classList.add('text-emerald-400', 'font-black');
+
+        balance += amount;
+        sessionTotalWon = (sessionTotalWon || 0) + amount;
+        currentPackageSessionWon += amount;
+        document.getElementById('currentPkgWonAmount').innerText = "৳" + currentPackageSessionWon.toLocaleString();
+
+        winningDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        ticketHistory.push({ pkg: pkgName, won: amount.toLocaleString() });
+        changeCurrency();
+        saveData();
+        playPopupSound();
+    } else {
+        el.classList.add('opacity-60');
+    }
+}
+
+function showMainView() {
+    document.getElementById('checkoutView').classList.add('hidden');
+    document.getElementById('mainContainer').classList.remove('hidden');
+}
+
+function openFinalCertificate() {
+    if (!winningDate) {
+        winningDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    document.getElementById('certUserName').innerText = currentUser.name;
+    document.getElementById('certUserPhone').innerText = currentUser.phone;
+    document.getElementById('certUserImg').src = currentUser.image;
+    document.getElementById('certPrizeAmount').innerText = "৳" + (currentPackageSessionWon || sessionTotalWon || 1226000).toLocaleString();
+    document.getElementById('certVerifyId').innerText = "LOTTO-" + Math.floor(10000 + Math.random() * 90000);
+    document.getElementById('certWinDate').innerText = winningDate;
+    document.getElementById('certificateModal').classList.remove('hidden');
+}
+function closeCertificate() { document.getElementById('certificateModal').classList.add('hidden'); }
+
+function toggleChatBox() {
+    const box = document.getElementById('chatBoxContainer');
+    box.classList.toggle('hidden');
+    renderChatMessages();
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInputMsg');
+    const txt = input.value.trim();
+    if (!txt) return;
+
+    const cName = currentUser.name;
+    if (!chatThreads[cName]) {
+        chatThreads[cName] = [];
+    }
+    chatThreads[cName].push({ sender: cName, text: txt });
+    saveData();
+    input.value = '';
+    renderChatMessages();
+    if (activeAdminChatClient === cName) {
+        renderAdminChatThread(cName);
+    }
+    renderAdminClientChatList();
+}
+
+function renderChatMessages() {
+    const area = document.getElementById('chatMessagesArea');
+    if (!area) return;
+    const cName = currentUser.name;
+    const msgs = chatThreads[cName] || [{ sender: "admin", text: "আসসালামু আলাইকুম! আপনাকে কীভাবে সাহায্য করতে পারি?" }];
+
+    let h = '';
+    msgs.forEach(m => {
+        if (m.sender === cName) {
+            h += `<div class="bg-amber-600/30 border border-amber-500/30 p-2 rounded-xl max-w-[80%] ml-auto text-right">আপনি: ${m.text}</div>`;
+        } else {
+            h += `<div class="bg-slate-800 p-2 rounded-xl max-w-[80%]">অ্যাডমিন: ${m.text}</div>`;
+        }
+    });
+    area.innerHTML = h;
+    area.scrollTop = area.scrollHeight;
+}
+
+function renderAdminClientChatList() {
+    const listEl = document.getElementById('adminClientList');
+    if (!listEl) return;
+    const clientNames = Object.keys(chatThreads);
+    if (clientNames.length === 0) {
+        listEl.innerHTML = `<p class="text-xs text-slate-500">কোনো ক্লায়েন্ট মেসেজ দেয়নি</p>`;
+        return;
+    }
+    let h = '';
+    clientNames.forEach(name => {
+        const isSelected = activeAdminChatClient === name;
+        const lastMsg = chatThreads[name][chatThreads[name].length - 1]?.text || "";
+        h += `<div onclick="selectAdminChatClient('${name}')" class="p-2.5 rounded-xl cursor-pointer transition border ${isSelected ? 'bg-purple-900/50 border-purple-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'}">
+            <div class="font-bold text-xs flex items-center justify-between">
+                <span><i class="fa-solid fa-user mr-1.5 text-amber-400"></i>${name}</span>
+                <span class="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded">${chatThreads[name].length}</span>
+            </div>
+            <p class="text-[10px] text-slate-400 truncate mt-1">${lastMsg}</p>
+        </div>`;
+    });
+    listEl.innerHTML = h;
+    if (activeAdminChatClient && chatThreads[activeAdminChatClient]) {
+        renderAdminChatThread(activeAdminChatClient);
+    }
+}
+
+function selectAdminChatClient(name) {
+    activeAdminChatClient = name;
+    document.getElementById('selectedChatClientName').innerText = name;
+    renderAdminClientChatList();
+    renderAdminChatThread(name);
+}
+
+function renderAdminChatThread(name) {
+    const container = document.getElementById('adminChatContainer');
+    if (!container) return;
+    const msgs = chatThreads[name] || [];
+    let h = '';
+    msgs.forEach(m => {
+        if (m.sender === 'admin') {
+            h += `<div class="bg-emerald-900/40 border border-emerald-500/30 p-2 rounded-xl max-w-[80%] ml-auto text-right"><strong>আপনি (অ্যাডমিন):</strong> ${m.text}</div>`;
+        } else {
+            h += `<div class="bg-slate-800 p-2 rounded-xl max-w-[80%]"><strong class="text-amber-400">${m.sender}:</strong> ${m.text}</div>`;
+        }
+    });
+    container.innerHTML = h || `<p class="text-slate-500">কোনো মেসেজ নেই।</p>`;
+    container.scrollTop = container.scrollHeight;
+}
+
+function sendAdminReply() {
+    if (!activeAdminChatClient) {
+        alert('প্রথমে বাম পাশ থেকে একজন ক্লায়েন্ট সিলেক্ট করুন!');
+        return;
+    }
+    const input = document.getElementById('adminReplyInput');
+    const txt = input.value.trim();
+    if (!txt) return;
+
+    if (!chatThreads[activeAdminChatClient]) {
+        chatThreads[activeAdminChatClient] = [];
+    }
+    chatThreads[activeAdminChatClient].push({ sender: "admin", text: txt });
+    saveData();
+    input.value = '';
+    renderAdminChatThread(activeAdminChatClient);
+    renderAdminClientChatList();
+    if (currentUser.name === activeAdminChatClient) {
+        renderChatMessages();
+    }
+}
+
+const rates = { 'BDT': { rate: 1, symbol: '৳' }, 'USD': { rate: 0.0083, symbol: '$' }, 'SAR': { rate: 0.031, symbol: 'SAR ' }, 'AED': { rate: 0.030, symbol: 'AED ' } };
+function changeCurrency() {
+    const sel = document.getElementById('currencySelector');
+    currentCurrency = sel ? sel.value : 'BDT';
+    const cfg = rates[currentCurrency] || rates['BDT'];
+    const safeBal = isNaN(Number(balance)) ? 15500 : Number(balance);
+    const balEl = document.getElementById('userBalance');
+    if (balEl) {
+        balEl.innerText = cfg.symbol + Math.round(safeBal * cfg.rate).toLocaleString();
+    }
+}
+
+function openSignUpModal() { document.getElementById('signUpModal').classList.remove('hidden'); }
+function closeSignUpModal() { document.getElementById('signUpModal').classList.add('hidden'); }
+function openSignInModal() { document.getElementById('signInModal').classList.remove('hidden'); }
+function closeSignInModal() { document.getElementById('signInModal').classList.add('hidden'); }
+function openForgotPasswordModal() { document.getElementById('signInModal').classList.add('hidden'); document.getElementById('forgotPasswordModal').classList.remove('hidden'); }
+function closeForgotPasswordModal() { document.getElementById('forgotPasswordModal').classList.add('hidden'); }
+function openAdminLoginModal() { document.getElementById('adminLoginModal').classList.remove('hidden'); }
+function closeAdminLoginModal() { document.getElementById('adminModal').classList.add('hidden'); document.getElementById('adminLoginModal').classList.add('hidden'); }
+
+function verifyAdminPassword() {
+    if (document.getElementById('adminPasswordInput').value === 'Mehedi12@#') {
+        document.getElementById('adminLoginModal').classList.add('hidden');
+        document.getElementById('adminModal').classList.remove('hidden');
+        switchAdminTab('packages');
+    } else { alert('ভুল পাসওয়ার্ড!'); }
+}
+function closeAdminModal() { document.getElementById('adminModal').classList.add('hidden'); }
+
+function handleSignIn() {
+    const identifier = document.getElementById('siPhoneEmail').value.trim();
+    const pass = document.getElementById('siPassword').value.trim();
+
+    if (!identifier || !pass) {
+        alert('দয়া করে মোবাইল/ইমেইল এবং পাসওয়ার্ড দিন!');
+        return;
+    }
+
+    const found = registeredUsers.find(u => (u.phone === identifier || u.email === identifier) && u.password === pass);
+    if (found) {
+        currentUser = {
+            ...currentUser,
+            ...found,
+            unclaimedBonus: found.unclaimedBonus || 0,
+            claimedBonus: found.claimedBonus || 0
+        };
+        updateProfileUI();
+        renderChatMessages();
+        saveData();
+        showBottomLeftPopup('✅ সাইন ইন সফল হয়েছে!');
+        closeSignInModal();
+    } else {
+        alert('❌ ভুল মোবাইল/ইমেইল অথবা পাসওয়ার্ড!');
+    }
+}
+
+function handleResetPassword() {
+    const identifier = document.getElementById('fpPhoneEmail').value.trim();
+    const newPass = document.getElementById('fpNewPassword').value.trim();
+
+    if (!identifier || !newPass) {
+        alert('সকল তথ্য পূরণ করুন!');
+        return;
+    }
+
+    const user = registeredUsers.find(u => u.phone === identifier || u.email === identifier);
+    if (user) {
+        user.password = newPass;
+        saveData();
+        showBottomLeftPopup('✅ পাসওয়ার্ড সফলভাবে রিসেট করা হয়েছে!');
+        closeForgotPasswordModal();
+        openSignInModal();
+    } else {
+        alert('❌ কোনো অ্যাকাউন্ট পাওয়া যায়নি!');
+    }
+}
+
+function handleSignUp() {
+    const name = document.getElementById('suName').value.trim();
+    const countryCode = document.getElementById('suCountryCode').value;
+    const phoneInput = document.getElementById('suPhone').value.trim();
+    const email = document.getElementById('suEmail').value.trim();
+    const referCodeInput = document.getElementById('suReferCode').value.trim();
+    const password = document.getElementById('suPassword').value.trim();
+    const confirmPassword = document.getElementById('suConfirmPassword').value.trim();
+
+    if (!name || !phoneInput || !email || !password || !confirmPassword) {
+        alert('দয়া করে সকল তথ্য পূরণ করুন!');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        alert('❌ পাসওয়ার্ড মিলছে না!');
+        return;
+    }
+
+    const fullPhone = countryCode + phoneInput;
+    const myNewReferCode = "REF-" + Math.floor(1000 + Math.random() * 9000);
+
+    if (referCodeInput) {
+        const referrer = registeredUsers.find(u => u.myReferCode === referCodeInput);
+        if (referrer) {
+            referrer.unclaimedBonus = (parseInt(referrer.unclaimedBonus) || 0) + 500;
+            referHistory.push({ referredName: name, commission: 500 });
+            showBottomLeftPopup(`🎁 ${referrer.name} এর রেফার বোনাস ৳৫০০ জমা হয়েছে!`);
+        }
+    }
+
+    const newUser = {
+        name,
+        phone: fullPhone,
+        email,
+        password,
+        image: currentUser.image,
+        myReferCode: myNewReferCode,
+        unclaimedBonus: 0,
+        claimedBonus: 0
+    };
+    registeredUsers.push(newUser);
+    currentUser = newUser;
+    updateProfileUI();
+    renderChatMessages();
+    saveData();
+
+    showBottomLeftPopup(`✅ একাউন্ট তৈরি হয়েছে! রেফার কোড: ${myNewReferCode}`);
+    closeSignUpModal();
+}
